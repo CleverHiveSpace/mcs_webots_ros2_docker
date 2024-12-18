@@ -6,10 +6,11 @@ FROM husarnet/ros:${PREFIX}${ROS_DISTRO}-ros-base AS package-builder
 ARG PREFIX
 
 # https://github.com/cyberbotics/webots/tags
-ARG WEBOTS_RELEASE_NAME=R2024a
+ARG WEBOTS_VERSION=R2023b
+ARG WEBOTS_PACKAGE_PREFIX=
 
-RUN cd / && apt-get update && apt-get install --yes wget && rm -rf /var/lib/apt/lists/ && \
-    wget https://github.com/cyberbotics/webots/releases/download/nightly_8_8_2023/webots-$WEBOTS_RELEASE_NAME-x86-64.tar.bz2 && \
+RUN apt-get update && apt-get install --yes wget bzip2 && rm -rf /var/lib/apt/lists/ && \
+    wget https://github.com/cyberbotics/webots/releases/download/$WEBOTS_VERSION/webots-$WEBOTS_VERSION-x86-64$WEBOTS_PACKAGE_PREFIX.tar.bz2 && \
     tar xjf webots-*.tar.bz2 && rm webots-*.tar.bz2
 
 RUN apt-get update -y && apt-get install -y git python3-colcon-common-extensions python3-vcstool python3-rosdep curl
@@ -49,14 +50,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install Webots runtime dependencies
 RUN apt-get update && apt-get install -y \
-     wget && \
+    wget && \
     rm -rf /var/lib/apt/lists/ && \
     wget https://raw.githubusercontent.com/cyberbotics/webots/master/scripts/install/linux_runtime_dependencies.sh && \
     chmod +x linux_runtime_dependencies.sh && ./linux_runtime_dependencies.sh && rm ./linux_runtime_dependencies.sh && rm -rf /var/lib/apt/lists/
 
 COPY --from=package-builder /ros2_ws /ros2_ws
 
-RUN apt-get update --fix-missing -y && apt-get install -y python3-rosdep && \
+WORKDIR /ros2_ws
+
+RUN ls -R /ros2_ws && apt-get update --fix-missing -y && apt-get install -y python3-rosdep && \
     # without this line (using vulcanexus base image) rosdep init throws error: "ERROR: default sources list file already exists:"
     rm -rf /etc/ros/rosdep/sources.list.d/20-default.list && \
     rosdep init && \
