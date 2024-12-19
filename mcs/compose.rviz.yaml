@@ -1,20 +1,23 @@
 # Quick Start
 # $ xhost local:root
-# $ docker compose up
+# $ docker compose -f compose.rviz.yaml up
 
-x-net-config: &net-config
+x-net-config:
+  &net-config
   network_mode: host
   ipc: host
   env_file: net.env
 
-x-gpu-config: &gpu-config
+x-gpu-config:
+  &gpu-config
   runtime: nvidia
   environment:
     - DISPLAY=${DISPLAY:?err}
     - NVIDIA_VISIBLE_DEVICES=all
     - NVIDIA_DRIVER_CAPABILITIES=all
 
-x-cpu-config: &cpu-config
+x-cpu-config:
+  &cpu-config
   environment:
     - DISPLAY=${DISPLAY:?err}
     - LIBGL_ALWAYS_SOFTWARE=1
@@ -22,13 +25,21 @@ x-cpu-config: &cpu-config
 services:
   # if you have NVDIA GPU and NVIDIA Container Toolkit, you can replace
   # "cpu-config" with "gpu-config"
-  webots:
-    image: husarion/webots:humble
+  rviz:
+    image: husarion/rviz2:humble
+    container_name: rviz
     <<: [ *net-config, *gpu-config ]
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /dev/dri:/dev/dri
+      - ./config/rosbot.rviz:/root/.rviz2/default.rviz
+
+  joy2twist:
+    image: husarion/joy2twist:galactic
+    <<: [ *net-config ]
+    devices:
+      - /dev/input
+    volumes:
+      - ./config/joy2twist.yaml:/joy2twist.yaml
     command: >
-      tail -f /dev/null
-    # command: >
-    #   ros2 launch webots_ros2_husarion ${ROBOT_NAME:-rosbot_xl}_launch.py
+      ros2 launch joy2twist gamepad_controller.launch.py
+        joy2twist_params_file:=/joy2twist.yaml
